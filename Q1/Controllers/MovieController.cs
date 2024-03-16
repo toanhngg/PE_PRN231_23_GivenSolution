@@ -13,7 +13,6 @@ namespace Q1.Controllers
 
         [HttpGet("GetMovies")]
         [EnableQuery]
-
         public IActionResult GetMovies()
         {
             //var movies = (from m in context.Movies

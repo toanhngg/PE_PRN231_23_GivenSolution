@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <script src="~/lib/jquery/dist/jquery.js"></script>
+
+
+    <style>
+        table a,
+        table img {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div>
+            <input type="date" name="dateschedule" id="dateschedule" />
+            <input type="submit" value="Get Schedule" id="getSchedule" class="btn btn-primary" />
+        </div>
+        <div>
+            <h1 id="setDate">
+            </h1>
+        </div>
+
+        <!-- Left Column (id="1") -->
+        <div class="row">
+            <div class="col-md-8">
+                <table class="table table-sm table-striped table-bordered m-2">
+                    <thead>
+                        <tr>
+                            <th>ScheduleId</th>
+                            <th>Room</th>
+                            <th>TimeSlot</th>
+                            <th>Movie</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="viewMovie"></tbody>
+                </table>
+            </div>
+
+            <!-- Right Column (id="2") -->
+            <div class="col-md-4">
+                <div>
+                    <p id="getDetail"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatDate(inputDate) {
+            var dateObj = new Date(inputDate);
+            var month = dateObj.getMonth() + 1; // Tháng bắt đầu từ 0 nên cần cộng thêm 1
+            var day = dateObj.getDate();
+            var year = dateObj.getFullYear();
+            return month + '/' + day + '/' + year;
+        }
+        $(document).ready(function () {
+            $("#getSchedule").click(function () {
+
+                var dateschedule = $("#dateschedule").val();
+                var showDate = document.getElementById('setDate');
+                var da = formatDate(dateschedule)
+                showDate.innerHTML = `Sreening schedule on ${da} `
+                console.log(`https://localhost:7228/api/Movie/List/?$filter=startDate eq ${dateschedule} or endDate eq ${dateschedule}`);
+                // Gửi yêu cầu AJAX để lấy thông tin lịch chiếu phim từ API getMovie
+                $.ajax({
+                    url: `https://localhost:7228/api/Movie/List/?$filter=startDate eq ${dateschedule} or endDate eq ${dateschedule}`,
+                    type: "GET",
+                    success: function (movieResponse) {
+                        console.log("Movie data:", movieResponse);
+                        updateTable(movieResponse);
+                    },
+                    error: function (error) {
+                        console.error("Error fetching movie data:", error);
+                    }
+                });
+            });
+
+            function updateTable(data) {
+                var table = $("#viewMovie");
+                table.empty(); // Clear existing table content
+
+                // Loop through the response data and append rows to the table
+                for (var i = 0; i < data.length; i++) {
+                    var item = data[i];
+
+                    // Append a row for each director
+                    table.append(
+                        `<tr>
+                           <td>${item.scheduleId}</td>
+                           <td>${item.screening.roomName}</td>
+                           <td>${item.screening.startTime} - ${item.screening.endTime}</td>
+                           <td>
+                             <a href = "#" onclick = "showMovieDetail(${item.id})" > ${item.title} </a>
+                            </td>
+                           <td>${item.note}</td>
+                                </tr>`
+                    );
+                }
+
+                // Attach a click event handler to the "Detail" buttons
+            }
+
+
+
+        });
+
+        function showMovieDetail(movieId) {
+            $.ajax({
+                url: `https://localhost:7228/api/Movie/GetMovies?$filter=id eq ${movieId}`,
+                type: "GET",
+                success: function (response) {
+                    var detailContent = "";
+                    response.forEach(function (movie) {
+                        // Thêm thông tin của mỗi bộ phim vào biến detailContent
+                        detailContent += `ID: ${movie.id}<br>
+                                              Title: ${movie.title}<br>
+                                              Year: ${movie.year}<br>
+                                              Description: ${movie.description}<br>
+                                              Director: ${movie.directorName}<br>
+                                              Director ID: ${movie.directorId}<br>
+                                              Movie Stars: ${movie.movieStars.join(", ")}<br>
+                                              -----------------------<br>`;
+                    });
+
+                    // Gán nội dung chi tiết vào phần tử HTML
+                    document.getElementById("getDetail").innerHTML = detailContent;
+                },
+                error: function (error) {
+                    console.error("Error fetching movie data:", error);
+                }
+            });
+
+
+
+        }
+
+
+    </script>
+</body>
+
+</html>
