@@ -1,0 +1,169 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <script src="~/lib/jquery/dist/jquery.js"></script>
+
+
+    <style>
+        table a,
+        table img {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div>
+            <input type="date" name="dateschedule" id="dateschedule" />
+            <input type="submit" value="Get Schedule" id="getSchedule" class="btn btn-primary" />
+        </div>
+        <div>
+            <h1>
+                Sreening schedule on 10/24/2013
+
+            </h1>
+        </div>
+
+        <!-- Left Column (id="1") -->
+        <div class="row">
+            <div class="col-md-8">
+                <table class="table table-sm table-striped table-bordered m-2" id="getListMovie">
+                 
+                </table>
+            </div>
+
+            <!-- Right Column (id="2") -->
+            <div class="col-md-4">
+                <div>
+                    <p id="getDetail"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $("#getSchedule").click(function () {
+                var dateschedule = $("#dateschedule").val();
+
+                // Gửi yêu cầu AJAX để lấy thông tin lịch chiếu phim từ API getMovie
+                $.ajax({
+                    url: `http://localhost:5270/api/Movie/List/?$filter=startDate eq ${dateschedule} or endDate eq ${ dateschedule }`,
+                    type: "GET",
+                    success: function (movieResponse) {
+                        console.log("Movie data:", movieResponse);
+
+                        // Gửi yêu cầu AJAX để lấy thông tin về các phòng chiếu từ API getRoom
+                        $.ajax({
+                            url: "http://localhost:5270/api/Room/List",
+                            type: "GET",
+                            success: function (roomResponse) {
+                                console.log("Room data:", roomResponse);
+
+                                // Gửi yêu cầu AJAX để lấy thông tin về các khoảng thời gian từ API GetTimeSlot
+                                $.ajax({
+                                    url: "http://localhost:5270/api/Timeslot/List",
+                                    type: "GET",
+                                    success: function (timeSlotResponse) {
+                                        console.log("Time slot data:", timeSlotResponse);
+
+                                        // Cập nhật bảng lịch chiếu phim trên trang web
+                                        updateScheduleTable(movieResponse, roomResponse, timeSlotResponse);
+                                    },
+                                    error: function (error) {
+                                        console.error("Error fetching time slot data:", error);
+                                    }
+                                });
+                            },
+                            error: function (error) {
+                                console.error("Error fetching room data:", error);
+                            }
+                        });
+                    },
+                    error: function (error) {
+                        console.error("Error fetching movie data:", error);
+                    }
+                });
+            });
+
+            function updateScheduleTable(movieData, roomData, timeSlotData) {
+                var table = $("#getListMovie");
+                table.empty(); // Xóa nội dung của bảng trước khi cập nhật
+
+                // Tạo hàng đầu tiên với các giờ chiếu
+                var headerRow = "<tr><th></th>";
+                for (var i = 0; i < timeSlotData.length; i++) {
+                    headerRow += `<th>${timeSlotData[i].startTime} - ${timeSlotData[i].endTime}</th>`;
+                }
+                headerRow += "</tr>";
+                table.append(headerRow);
+
+                // Tạo các hàng cho từng phòng chiếu và các phim
+                for (var i = 0; i < roomData.length; i++) {
+                    var room = roomData[i];
+
+                    // Tạo một hàng cho thông tin phòng chiếu
+                    var roomRow = `<tr><td>${room.title}</td>`;
+
+                    for (var j = 0; j < timeSlotData.length; j++) {
+                        var timeSlot = timeSlotData[j];
+
+                        // Tìm các lịch chiếu phim trong phòng và thời gian này
+                        var screenings = movieData.filter(function (movie) {
+                            // console.log("movie.roomId : " + movie.screening.roomId);
+                            // console.log("room.id : " + room.id);
+                            // console.log("movie.timeSlotId : " + movie.screening.timeSlotId);
+                            // console.log("timeSlot.id : " + timeSlot.id);
+
+                            return movie.screening.roomId === room.id && movie.screening.timeSlotId === timeSlot.id;
+                        });
+
+                        // Tạo chuỗi HTML cho các lịch chiếu phim trong thời gian này
+                        var screeningsHtml = "";
+                        for (var k = 0; k < screenings.length; k++) {
+                            var screening = screenings[k];
+                            screeningsHtml += `<a href="#" onclick="showMovieDetail(${screening.id})">${screening.title}</a><br>`;
+                        }
+
+                        // Thêm thông tin lịch chiếu phim vào hàng
+                        roomRow += `<td>${screeningsHtml}</td>`;
+                    }
+                    roomRow += "</tr>";
+                    table.append(roomRow);
+                }
+            }
+
+
+
+        });
+
+        function showMovieDetail(movieId) {
+
+            $.ajax({
+                url: `http://localhost:5270/api/Movie/GetMovies?$filter= id eq ${movieId}`,
+                type: "GET",
+                success: function (response) {
+                    var detailContent = `Title : ${response.title}:<br>`;
+                    document.getElementById("getDetail").innerHTML = detailContent;
+
+                },
+                error: function (error) {
+                    console.error("Error fetching time slot data:", error);
+                }
+            });
+
+
+        }
+
+
+    </script>
+</body>
+
+</html>
