@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8" />
+    <title>List Order</title>
+    <link href="lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <script src="lib/jquery/dist/jquery.js"></script>
+</head>
+<body>
+    <div>
+        <input type="text" name="fromDate" id="fromDate" placeholder="From Date" />
+        <input type="text" name="toDate" id="toDate" placeholder="To Date" />
+        <input type="submit" value="Search" id="searchBtn" class="btn btn-primary" />
+    </div>
+    <div id="getDetail"></div>
+    <div class="row">
+        <div>
+            <table class="table table-sm table-striped table-bordered m-2">
+                <thead>
+                    <tr>
+                        <th>OrderId</th>
+                        <th>CustomerId</th>
+                        <th>CustomerName</th>
+                        <th>EmployeeId</th>
+                        <th>EmployeeName</th>
+                        <th>EmployeeDepartmentName</th>
+                        <th>OrderDate</th>
+                        <th>Freight</th>
+                    </tr>
+                </thead>
+                <tbody id="getOrders"></tbody>
+            </table>
+        </div>
+
+        <!-- Right Column (id="2") -->
+        <!--<div class="col-md-4">
+            <div>
+                <p id="getDetail"></p>
+            </div>
+        </div>-->
+    </div>
+    <script>
+        $.ajax({
+            url: `http://localhost:5135/api/Order/GetAllOrder`,
+            type: "GET",
+            success: function (response) {
+                console.log(response);
+                // Call a function to update the table with the received data
+
+                updateTable(response);
+            },
+            error: function (error) {
+                console.error(error);
+                // Handle error scenarios if needed
+            }
+        });
+
+        $(document).ready(function () {
+            $("#searchBtn").click(function () {
+                var fromDate = $("#fromDate").val();
+                var toDate = $("#toDate").val();
+
+                // Using CORS Anywhere as a proxy
+                $.ajax({
+                    url: `http://localhost:5135/api/Order/GetOrderByDate/${fromDate}/${toDate}`,
+                    type: "GET",
+                    success: function (response) {
+                        console.log(response);
+                        updateTable(response);
+                    },
+                    error: function (error) {
+                        console.error(error);
+                        // Handle error scenarios if needed
+                    }
+                });
+            });
+        });
+            
+         
+   
+        function updateTable(data) {
+            var table = $("#getOrders");
+            table.empty(); // Clear existing table content
+
+            // Loop through the response data and append rows to the table
+            for (var i = 0; i < data.length; i++) {
+                var order = data[i];
+
+                // Append a row for each director
+                table.append(
+                    `<tr>
+          <td>${order.orderId}</td>
+          <td>${order.customerId}</td>
+          <td>${order.customerName} <a href="#" onclick="deleteCustomer('${order.customerId}', this)">DeleteCustomer</a> </td>
+          <td>${order.employeeId}</td>
+          <td>${order.employeeName}</td>
+          <td>${order.employeeDepartmentName}</td>
+          <td>${order.orderDate}</td>
+          <td>${order.freight}</td>
+      </tr>`
+                );
+            }
+
+        }
+        function deleteCustomer(customerId, rowElement) {
+            //debugger
+            console.log(`http://localhost:5135/api/Customer/Delete/${customerId}`);
+            $.ajax({
+                url: `http://localhost:5135/api/Customer/Delete/${customerId}`,
+                type: "POST",
+                success: function (response) {
+                    var detailContent = "";
+            
+                    detailContent += `You have delete ${response.customerDeleteCount} customer(s) , ${response.orderDeleteCount} order(s) and ${response.orderDetailDeleteCount} order detail(s)`;
+                    $(rowElement).closest('tr').remove();
+
+                    // Gán nội dung chi tiết vào phần tử HTML
+                    document.getElementById("getDetail").innerHTML = detailContent;
+                },
+                error: function (error) {
+                    console.error("Error fetching movie data:", error);
+                }
+            });
+        }
+
+  
+    </script>
+</body>
+</html>
